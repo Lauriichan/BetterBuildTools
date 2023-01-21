@@ -1,0 +1,33 @@
+# This example file contains all major versions as of
+# the 21th of January 2023.
+#
+# Each line is recognised as one version.
+# So to add more versions simply add the version on a new line
+# And to remove versions just remove them or comment them with
+# a # at the start of the line.
+#
+# Empty lines are also ignored
+#
+# Please note:
+# You don't need to use a 
+
+1.8
+1.8.3
+1.8.8
+1.9
+1.9.4
+1.10.2
+1.11
+1.12.2
+1.13
+1.13.2
+1.14.2
+1.15.2
+1.16.1
+1.16.3
+1.16.4
+1.17.1
+1.18.1
+1.18.2
+1.19
+1.19.3

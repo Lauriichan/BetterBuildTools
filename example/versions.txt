@@ -1,5 +1,5 @@
 # This example file contains all major versions as of
-# the 21th of January 2023.
+# the 26th of February 2024.
 #
 # Each line is recognised as one version.
 # So to add more versions simply add the version on a new line
@@ -31,3 +31,7 @@
 1.18.2
 1.19
 1.19.3
+1.19.4
+1.20.1
+1.20.2
+1.20.4

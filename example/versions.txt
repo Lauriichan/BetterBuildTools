@@ -9,7 +9,8 @@
 # Empty lines are also ignored
 #
 # Please note:
-# You don't need to use a 
+# You don't need to use a file, you can simply 
+# append the versions you want to be built as program arguments
 
 1.8
 1.8.3
@@ -35,3 +36,4 @@
 1.20.1
 1.20.2
 1.20.4
+1.20.5

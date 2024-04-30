@@ -1,24 +1,55 @@
 package me.lauriichan.build.builder;
 
 import java.io.File;
+import java.util.HashMap;
 
-public enum JavaVersion {
+public final class JavaVersion {
 
-    JAVA_8(52),
-    JAVA_9(53),
-    JAVA_10(54),
-    JAVA_11(55),
-    JAVA_12(56),
-    JAVA_13(57),
-    JAVA_14(58),
-    JAVA_15(59),
-    JAVA_16(60),
-    JAVA_17(61),
-    JAVA_18(62),
-    JAVA_19(63);
+    public static final JavaVersion JAVA_8 = new JavaVersion(8, 52);
 
-    private static final JavaVersion[] versions = values();
+    private static final HashMap<Integer, JavaVersion> CLASS_TO_VERSION = new HashMap<>();
     private static final JavaVersion current = getByFeatureVersion(Runtime.version().feature());
+
+    static {
+        CLASS_TO_VERSION.put(JAVA_8.classVersion(), JAVA_8);
+    }
+
+    public static final JavaVersion getByClassVersion(int classVersion) {
+        JavaVersion version = CLASS_TO_VERSION.get(classVersion);
+        if (version != null) {
+            return version;
+        }
+        int difference = classVersion - JAVA_8.classVersion();
+        if (difference < 0) {
+            return null;
+        }
+        CLASS_TO_VERSION.put(classVersion, version = new JavaVersion(JAVA_8.featureVersion() + difference, classVersion));
+        return version;
+    }
+
+    public static final JavaVersion getByFeatureVersion(int featureVersion) {
+        int difference = featureVersion - JAVA_8.featureVersion();
+        if (difference < 0) {
+            return null;
+        }
+        return getByClassVersion(JAVA_8.classVersion() + difference);
+    }
+
+    public static JavaVersion getByString(final String name) {
+        String[] parts = name.split("_");
+        if (parts.length != 2) {
+            return null;
+        }
+        try {
+            return getByFeatureVersion(Integer.parseInt(parts[1]));
+        } catch (NumberFormatException nfe) {
+            return null;
+        }
+    }
+
+    public static JavaVersion getCurrent() {
+        return current;
+    }
 
     private final String name;
     private final int classVersion;
@@ -27,11 +58,10 @@ public enum JavaVersion {
     private String path;
     private String homePath;
 
-    JavaVersion(final int classVersion) {
-        final String[] parts = super.name().split("_");
-        this.name = parts[0].charAt(0) + parts[0].substring(1).toLowerCase() + ' ' + parts[1];
+    JavaVersion(final int majorVersion, final int classVersion) {
+        this.name = "Java " + majorVersion;
         this.classVersion = classVersion;
-        this.featureVersion = Integer.parseInt(parts[1]);
+        this.featureVersion = majorVersion;
     }
 
     public boolean path(String path) {
@@ -60,7 +90,7 @@ public enum JavaVersion {
     public String path() {
         return path;
     }
-    
+
     public String homePath() {
         return homePath;
     }
@@ -80,36 +110,6 @@ public enum JavaVersion {
     @Override
     public String toString() {
         return name;
-    }
-
-    public static JavaVersion getCurrent() {
-        return current;
-    }
-
-    public static JavaVersion getByFeatureVersion(final int featureVersion) {
-        for (final JavaVersion version : versions) {
-            if (version.featureVersion == featureVersion) {
-                return version;
-            }
-        }
-        return null;
-    }
-
-    public static JavaVersion getByClassVersion(final int classVersion) {
-        for (final JavaVersion version : versions) {
-            if (version.classVersion == classVersion) {
-                return version;
-            }
-        }
-        return null;
-    }
-
-    public static JavaVersion getByString(final String name) {
-        try {
-            return JavaVersion.valueOf(name.toUpperCase());
-        } catch (final IllegalArgumentException iae) {
-            return null;
-        }
     }
 
 }

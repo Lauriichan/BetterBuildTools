@@ -3,7 +3,6 @@
 target/
 
 dependency-reduced-pom.xml
-pom.xml
 
 .classpath
 .project

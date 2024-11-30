@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -314,19 +316,18 @@ public final class Builder {
 
     private static boolean downloadFile(URL url, File file) throws IOException {
         HttpURLConnection httpConnection = (HttpURLConnection) (url.openConnection());
-        long fileSize = httpConnection.getContentLength();
-        return Dialogs.openTaskDialog("Downloading BuildTools", fileSize, (progress) -> {
+        httpConnection.connect();
+        return Dialogs.openTaskDialog("Downloading BuildTools", 100, (progress) -> {
             if (!file.exists()) {
                 file.createNewFile();
             }
-            ITask task = progress.begin("Downloading BuildTools.jar", fileSize);
+            ITask task = progress.begin("Downloading BuildTools.jar", 100);
             try (BufferedInputStream input = new BufferedInputStream(httpConnection.getInputStream())) {
                 try (BufferedOutputStream output = new BufferedOutputStream(new FileOutputStream(file), 1024)) {
                     byte[] data = new byte[1024];
                     int amount = 0;
                     while ((amount = input.read(data, 0, data.length)) >= 0) {
                         output.write(data, 0, amount);
-                        task.work(amount);
                     }
                 }
             }

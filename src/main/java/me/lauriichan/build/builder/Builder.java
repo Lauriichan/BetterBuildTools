@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -18,11 +19,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.jar.Attributes;
 import java.util.jar.Attributes.Name;
+import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
@@ -76,7 +80,7 @@ public final class Builder {
         final String path = buildToolsFile.getAbsolutePath();
 
         final String outputDirPath = outputDir.getAbsolutePath();
-        final boolean clean = ensureSafeClean(builder.getOrDefault("clean-directory", false), workDir, new File(""));
+        final boolean clean = ensureSafeClean(builder.getOrDefault("clean-directory", false), new File(""), workDir);
 
         String[] arguments = buildArgumentBase(builder);
 
@@ -133,6 +137,12 @@ public final class Builder {
                 try {
                     if (process.exitValue() == 0) {
                         System.out.println("INFO: Build of version '" + version.getBuild() + "' was successful!");
+                        try {
+                            createRemappedBootstrap(version.getBuild(), outputDirPath, workDir);
+                        } catch (Throwable err) {
+                            System.out.println("WARNING: Failed to create remapped bootstrapper for '" + version.getBuild() + "': ["
+                                + err.getClass().getSimpleName() + "]: " + err.getMessage());
+                        }
                         continue;
                     }
                     fails++;
@@ -190,8 +200,61 @@ public final class Builder {
         });
     }
 
+    private static void createRemappedBootstrap(String spigotVersion, String outputDirPath, File workDir) throws Throwable {
+        File remappedJar = new File(workDir, "Spigot/Spigot-Server/target/spigot-" + spigotVersion + "-R0.1-SNAPSHOT-remapped-mojang.jar");
+        File file = new File(outputDirPath, "spigot-" + spigotVersion + ".jar");
+        File outFile = new File(outputDirPath, "spigot-" + spigotVersion + "-remapped.jar");
+        if (!remappedJar.exists() || !file.exists()) {
+            return;
+        }
+        if (outFile.exists()) {
+            outFile.delete();
+        }
+        System.out.println("INFO: Creating remapped bootstrapper for '" + spigotVersion + "'...");
+        String expectedJarName = "spigot-" + spigotVersion + "-R0.1-SNAPSHOT.jar";
+        try (JarFile jarFile = new JarFile(file)) {
+            JarEntry versionEntry = jarFile.getJarEntry("META-INF/versions/" + expectedJarName);
+            if (versionEntry == null) {
+                throw new IllegalStateException("Couldn't find spigot version jar.");
+            }
+            int available = 0;
+            byte[] buffer = new byte[32768];
+            try (JarOutputStream outputStream = new JarOutputStream(new FileOutputStream(outFile))) {
+                Iterator<JarEntry> iterator = jarFile.entries().asIterator();
+                JarEntry entry;
+                while (iterator.hasNext()) {
+                    entry = iterator.next();
+                    if (!entry.getName().endsWith(expectedJarName)) {
+                        outputStream.putNextEntry(entry);
+                        if (!entry.isDirectory()) {
+                            try (InputStream entryInput = jarFile.getInputStream(entry)) {
+                                while ((available = entryInput.read(buffer)) != -1) {
+                                    outputStream.write(buffer, 0, available);
+                                }
+                            }
+                        }
+                        outputStream.closeEntry();
+                        continue;
+                    }
+                    entry = new JarEntry(versionEntry.getName());
+                    outputStream.putNextEntry(entry);
+                    long size = 0;
+                    try (FileInputStream fileInput = new FileInputStream(remappedJar)) {
+                        while ((available = fileInput.read(buffer)) != -1) {
+                            outputStream.write(buffer, 0, available);
+                            size += available;
+                        }
+                    }
+                    entry.setSize(size);
+                    outputStream.closeEntry();
+                }
+            }
+        }
+        System.out.println("INFO: Successfully created remapped bootstrapper for '" + spigotVersion + "'!");
+    }
+
     private static boolean ensureSafeClean(boolean clean, File selfDir, File workDir) {
-        if (clean && selfDir.getAbsolutePath().equals(workDir.getAbsolutePath())) {
+        if (clean && selfDir.getAbsolutePath().startsWith(workDir.getAbsolutePath())) {
             System.out.println("WARNING: Unsafe clean-directory detected, disabling it.");
             System.out.println(
                 "WARNING: Please use another directory than the main work directory as BuildTools directory otherwise clean-directory won't work");
